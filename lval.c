@@ -79,7 +79,7 @@ void lval_del(lval* v){
 
     // free up strings
     case LVAL_ERR: free(v->err); break;
-    case LVAL_SYM: free(v->err); break;
+    case LVAL_SYM: free(v->sym); break;
 
     // delete all items inside s-expr
     case LVAL_SEXPR:

@@ -1,7 +1,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include "mpc.h"
-#include "lval.h"
+#include "eval.h"
 
 /*
   arrow keys work fine on windows but doesnt work on mac and linux
@@ -74,9 +74,9 @@ int main(int i, char** a){
       // mpc_ast_print(r.output);
 
       // calculate result
-      // lval result = eval(r.output);
-      lval* x = lval_read(r.output);
-      lval_println(x);
+      lval* result = lval_eval(lval_read(r.output));
+      lval_println(result);
+      lval_del(result);
       mpc_ast_delete(r.output);
     }
     else{

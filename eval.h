@@ -1,5 +1,7 @@
-// #include "mpc.h"
-// #include "lval.h"
+#include "lval.h"
 
-// lval eval(mpc_ast_t*);
-// lval eval_op(lval, char*, lval);
+lval* lval_eval_sexpr(lval*);
+lval* lval_eval(lval*);
+lval* lval_pop(lval*, int);
+lval* lval_take(lval*, int);
+lval* calculate(lval*, char*);
