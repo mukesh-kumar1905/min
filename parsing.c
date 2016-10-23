@@ -98,11 +98,11 @@ long eval(mpc_ast_t* t){
   // the operator is always second child
   char* op = t -> children[1] -> contents;
   // evaluate third child, base for calculations
-  long x = eval(t->children[2]);
+  long x = eval(t -> children[2]);
   // iterate over other children and combine
   int i = 3;
-  while (strstr(t->children[i]->tag,"expr")) {
-    x = eval_op(x, op, eval(t->children[i]));
+  while (strstr(t -> children[i] -> tag,"expr")) {
+    x = eval_op(x, op, eval(t -> children[i]));
     i++;
   }
 
