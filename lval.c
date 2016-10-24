@@ -36,6 +36,16 @@ lval* lval_sexpr(){
   return v;
 }
 
+// Construct a pointer to new q-expression lval
+lval* lval_qexpr(){
+  lval* v = malloc(sizeof(lval));
+  v -> type = LVAL_QEXPR;
+  v -> count = 0;
+  v -> cell = NULL;
+  return v;
+}
+
+// add lval to s-expression of another lval
 lval* lval_add(lval* v, lval *x){
   v -> count++;
   v -> cell = realloc(v -> cell, sizeof(lval*) * v -> count);
@@ -58,6 +68,7 @@ lval* lval_read(mpc_ast_t* t){
   lval* x = NULL;
   if(strcmp(t -> tag, ">") == 0){ x = lval_sexpr(); }
   if(strcmp(t -> tag, "sexpr")){ x = lval_sexpr(); }
+  if(strstr(t -> tag, "qexpr")){ x = lval_qexpr(); }
 
   // fill the list with valid expressions within
   for (int i = 0; i < t -> children_num; i++)
@@ -81,7 +92,8 @@ void lval_del(lval* v){
     case LVAL_ERR: free(v->err); break;
     case LVAL_SYM: free(v->sym); break;
 
-    // delete all items inside s-expr
+    // delete all items inside s-expr or q-expr
+    case LVAL_QEXPR:
     case LVAL_SEXPR:
       for (int i = 0; i < v -> count; i++)
       {
@@ -116,6 +128,7 @@ void lval_print(lval* v){
     case LVAL_ERR: printf("Error: %s", v -> err); break;
     case LVAL_SYM:   printf("%s", v->sym); break;
     case LVAL_SEXPR: lval_expr_print(v, '(', ')'); break;
+    case LVAL_QEXPR: lval_expr_print(v, '{', '}'); break;
   }
 }
 
