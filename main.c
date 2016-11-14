@@ -17,9 +17,10 @@ int main(int i, char** a){
   mpc_parser_t* Min = mpc_new("min");
 
   mpca_lang(MPCA_LANG_DEFAULT,
-  "                                                     \
-    number   : /-?[0-9]+/;                              \
-    symbol   : '+' | '-' | '*' | '/';                   \
+  "                                                      \
+    number   : /-?[0-9]+/;                               \
+    symbol   : \"list\" | \"head\" | \"tail\" | \"join\" \
+             | \"eval\" | '+' | '-' | '*' | '/';         \
     sexpr    : '(' <expr>* ')';                         \
     qexpr    : '{' <expr>* '}';                         \
     expr     : <number> | <symbol> | <sexpr> | <qexpr>; \
