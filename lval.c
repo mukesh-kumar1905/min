@@ -1,4 +1,5 @@
 #include <stdio.h>
+#include <string.h>
 #include "lval.h"
 
 // Construct a pointer to new number lval
@@ -53,6 +54,13 @@ lval* lval_add(lval* v, lval *x){
   return v;
 }
 
+lval* lval_fun(lcalculate func){
+  lval* v = malloc(sizeof(lval));
+  v -> type = LVAL_FUN;
+  v -> fun = func;
+  return v;
+}
+
 lval* lval_read_num(mpc_ast_t* t){
   errno = 0;
   long x = strtol(t -> contents, NULL, 10);
@@ -82,11 +90,45 @@ lval* lval_read(mpc_ast_t* t){
   }
   return x;
 }
+
+//return a copy of lval
+lval* lval_copy(lval* v){
+  lval* x = malloc(sizeof(lval));
+  x -> type = v -> type;
+
+  switch(v -> type){
+    // copy number & funcs directly
+    case LVAL_NUM: x -> num = v -> num; break;
+    case LVAL_FUN: x -> fun = v -> fun; break;
+    //allocate and copy to new string
+    case LVAL_SYM:
+      x -> sym = malloc(strlen(x -> sym) + 1);
+      strcpy(x -> sym, v -> sym);
+      break;
+    case LVAL_ERR:
+      x -> err = malloc(strlen(x -> err) + 1);
+      strcpy(x -> err, v -> err);
+      break;
+    // copy lists by copying sub-epr list
+    case LVAL_SEXPR:
+    case LVAL_QEXPR:
+      x -> count = v -> count;
+      x -> cell = malloc(sizeof(lval*) * (x -> count));
+      for (int i = 0; i < x -> count; i++)
+      {
+        x -> cell[i] = lval_copy(v -> cell[i]);
+      }
+      break;
+  }
+  return x;
+}
+
 // free up memory from lval
 void lval_del(lval* v){
   switch (v -> type){
-    // do nothing for primitive data
+    // do nothing for primitive data and function pointers
     case LVAL_NUM: break;
+    case LVAL_FUN: break;
 
     // free up strings
     case LVAL_ERR: free(v->err); break;
@@ -104,6 +146,62 @@ void lval_del(lval* v){
       break;
   }
   free(v);
+}
+
+lenv* lenv_new(void){
+  lenv* e = malloc(sizeof(lenv));
+  e -> count = 0;
+  e -> syms = NULL;
+  e -> vals = NULL;
+  return e;
+}
+
+void lenv_del(lenv* e){
+  for (int i = 0; i < e -> count; i++)
+  {
+    free(e -> syms[i]);
+    lval_del(e -> vals[i]);
+  }
+  free(e -> syms);
+  free(e -> vals);
+  free(e);
+}
+
+lval* lenv_get(lenv* e, lval* k){
+  for (int i = 0; i < e -> count; ++i)
+  {
+    if(strcmp(e -> syms[i], k -> sym) == 0){
+      return lval_copy(e -> vals[i]);
+    }
+  }
+  return lval_err("unbound symbol");
+}
+
+void lenv_put(lenv* e, lval* k, lval* v){
+  for (int i = 0; i < e -> count; ++i)
+  {
+    if(strcmp(e -> syms[i], k -> sym) == 0){
+      lval_del(e -> vals[i]);
+      e -> vals[i] = lval_copy(v);
+      return;
+    }
+  }
+
+  e -> count++;
+  e -> vals = realloc(e -> vals, (e -> count) * sizeof(lval*));
+  e -> syms = realloc(e -> syms, (e -> count) * sizeof(char*));
+
+  e -> vals[e -> count - 1] = lval_copy(v);
+  e -> syms[e -> count - 1] = malloc(strlen(k -> sym) + 1);
+  strcpy(e -> syms[e -> count -1], k -> sym);
+}
+
+void lenv_add_builtin(lenv* e, char* name, lcalculate func){
+  lval* k = lval_sym(name);
+  lval* v = lval_fun(func);
+  lenv_put(e, k, v);
+  lval_del(k);
+  lval_del(v);
 }
 
 void lval_expr_print(lval* v, char open, char close){
@@ -125,6 +223,7 @@ void lval_expr_print(lval* v, char open, char close){
 void lval_print(lval* v){
   switch (v -> type){
     case LVAL_NUM: printf("%li", v -> num); break;
+    case LVAL_FUN: printf("<function>"); break;
     case LVAL_ERR: printf("Error: %s", v -> err); break;
     case LVAL_SYM:   printf("%s", v->sym); break;
     case LVAL_SEXPR: lval_expr_print(v, '(', ')'); break;

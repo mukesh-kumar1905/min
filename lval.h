@@ -1,31 +1,54 @@
 #include "deps/mpc.h"
 
-// Create Enumeration of Possible val Types
-enum { LVAL_ERR, LVAL_NUM, LVAL_SYM, LVAL_SEXPR, LVAL_QEXPR };
-// Create Enumeration of Possible Error Types
-enum { LERR_DIV_ZERO, LERR_BAD_OP, LERR_BAD_NUM };
+struct lval;
+struct lenv;
+typedef struct lval lval;
+typedef struct lenv lenv;
 
-// lval struct to denote lisp return value enabling return of error or number
-typedef struct lval {
+// Create Enumeration of Possible val Types
+enum { LVAL_ERR, LVAL_NUM, LVAL_SYM, LVAL_FUN, LVAL_SEXPR, LVAL_QEXPR };
+
+typedef lval*(*lcalculate)(lenv*, lval*);
+
+// lval struct to denote lisp value
+struct lval {
   int type;
+
   long num;
   char* err;
   char* sym;
+  lcalculate fun;
+
   int count;
   struct lval** cell;
-} lval;
+};
+
+// lenv struct to maintain execution environment
+struct lenv {
+  int count;
+  char** syms;
+  lval** vals;
+};
 
 lval* lval_num(long);
 lval* lval_err(char*);
 lval* lval_sym(char*);
 lval* lval_sexpr();
+lval* lval_fun(lcalculate);
 lval* lval_add(lval*, lval*);
 
 lval* lval_read_num(mpc_ast_t*);
 lval* lval_read(mpc_ast_t*);
 
+lval* lval_copy(lval*);
 void lval_del(lval*);
 
+lenv* lenv_new(void);
+void lenv_del(lenv*);
+
+lval* lenv_get(lenv* e, lval* k);
+void lenv_put(lenv* e, lval* k, lval* v);
+void lenv_add_builtin(lenv*, char*, lcalculate);
 
 void lval_print(lval*);
 void lval_println(lval*);

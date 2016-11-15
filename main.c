@@ -19,14 +19,20 @@ int main(int i, char** a){
   mpca_lang(MPCA_LANG_DEFAULT,
   "                                                      \
     number   : /-?[0-9]+/;                               \
-    symbol   : \"list\" | \"head\" | \"tail\" | \"join\" \
-             | \"eval\" | '+' | '-' | '*' | '/';         \
-    sexpr    : '(' <expr>* ')';                         \
-    qexpr    : '{' <expr>* '}';                         \
-    expr     : <number> | <symbol> | <sexpr> | <qexpr>; \
-    min      : /^/ <expr>* /$/;                         \
+    symbol   : /[a-zA-Z0-9_+\\-*\\/\\\\=<>!&]+/;         \
+    sexpr    : '(' <expr>* ')';                          \
+    qexpr    : '{' <expr>* '}';                          \
+    expr     : <number> | <symbol> | <sexpr> | <qexpr>;  \
+    min      : /^/ <expr>* /$/;                          \
   ",
   Number, Symbol, Sexpr, Qexpr, Expr, Min);
+
+  // new environment
+  lenv* e = lenv_new();
+
+  //setup builtin funcs
+  lenv_add_builtins(e);
+
   // Version and Exit Information
   puts("min Version 0.1");
   puts("Press Ctrl+c to Exit\n");
@@ -43,7 +49,7 @@ int main(int i, char** a){
       // mpc_ast_print(r.output);
 
       // calculate result
-      lval* result = lval_eval(lval_read(r.output));
+      lval* result = lval_eval(e, lval_read(r.output));
       lval_println(result);
       lval_del(result);
       mpc_ast_delete(r.output);
@@ -56,6 +62,8 @@ int main(int i, char** a){
 
     free(input);
   }
+
+  lenv_del(e);
   // Undefine and Delete our Parsers
   mpc_cleanup(6, Number, Symbol, Sexpr, Qexpr, Expr, Min);
   return 0;
