@@ -46,8 +46,8 @@ void lval_del(lval*);
 lenv* lenv_new(void);
 void lenv_del(lenv*);
 
-lval* lenv_get(lenv* e, lval* k);
-void lenv_put(lenv* e, lval* k, lval* v);
+lval* lenv_get(lenv*, lval*);
+void lenv_put(lenv*, lval*, lval*);
 void lenv_add_builtin(lenv*, char*, lcalculate);
 
 void lval_print(lval*);
