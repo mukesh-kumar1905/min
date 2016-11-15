@@ -20,3 +20,6 @@ lval* builtin_op(lenv*, lval*, char*);
 lval* builtin_def(lenv*, lval*);
 
 void lenv_add_builtins(lenv*);
+
+// macro to check if condition is met, if not delete lval and return error
+#define LASSERT(args, cond, fmt, ...) if(!cond){ lval_del(args); return lval_err(fmt, ##__VA_ARGS__); }

@@ -30,8 +30,10 @@ struct lenv {
   lval** vals;
 };
 
+char* ltype_name(int);
+
 lval* lval_num(long);
-lval* lval_err(char*);
+lval* lval_err(char*, ...);
 lval* lval_sym(char*);
 lval* lval_sexpr();
 lval* lval_fun(lcalculate);

@@ -64,8 +64,6 @@ lval* lval_take(lval* v, int i){
   return x;
 }
 
-// macro to check if condition is met, if not delete lval and return error
-#define LASSERT(args, cond, err) if(!cond){ lval_del(args); return lval_err(err); }
 
 lval* builtin_head(lenv* e, lval* a){
   // head should have only 1 args

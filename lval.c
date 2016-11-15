@@ -2,6 +2,18 @@
 #include <string.h>
 #include "lval.h"
 
+char* ltype_name(int t) {
+  switch(t) {
+    case LVAL_FUN: return "Function";
+    case LVAL_NUM: return "Number";
+    case LVAL_ERR: return "Error";
+    case LVAL_SYM: return "Symbol";
+    case LVAL_SEXPR: return "S-Expression";
+    case LVAL_QEXPR: return "Q-Expression";
+    default: return "Unknown";
+  }
+}
+
 // Construct a pointer to new number lval
 lval* lval_num(long x){
   lval* v = malloc(sizeof(lval));
@@ -11,11 +23,25 @@ lval* lval_num(long x){
 }
 
 // Construct a pointer to new error lval
-lval* lval_err(char* m){
+lval* lval_err(char* fmt, ...){
   lval* v = malloc(sizeof(lval));
   v -> type = LVAL_ERR;
-  v -> err = malloc(strlen(m) + 1);
-  strcpy(v->err, m);
+
+  /* Create a va list and initialize it */
+  va_list va;
+  va_start(va, fmt);
+
+  // allocate 512 bytes for error
+  v -> err = malloc(512);
+
+  // printf the error string with a maximum of 511 characters
+  vsnprintf(v->err, 511, fmt, va);
+
+  // Reallocate to number of bytes actually used
+  v->err = realloc(v->err, strlen(v->err)+1);
+
+  va_end(va);
+
   return v;
 }
 
@@ -174,7 +200,7 @@ lval* lenv_get(lenv* e, lval* k){
       return lval_copy(e -> vals[i]);
     }
   }
-  return lval_err("unbound symbol");
+  return lval_err("unbound symbol '%s'", k -> sym);
 }
 
 void lenv_put(lenv* e, lval* k, lval* v){
