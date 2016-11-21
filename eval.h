@@ -2,6 +2,7 @@
 
 lval* lval_eval_sexpr(lenv*, lval*);
 lval* lval_eval(lenv*, lval*);
+lval* lval_call(lenv*, lval*, lval*);
 
 lval* lval_pop(lval*, int);
 lval* lval_take(lval*, int);
@@ -17,9 +18,25 @@ lval* builtin_eval(lenv*, lval*);
 lval* lval_join(lval*, lval*);
 lval* builtin_join(lenv*, lval*);
 lval* builtin_op(lenv*, lval*, char*);
+lval* builtin_var(lenv*, lval*, char*);
 lval* builtin_def(lenv*, lval*);
+lval* builtin_put(lenv*, lval*);
+lval* builtin_lambda(lenv*, lval*);
 
 void lenv_add_builtins(lenv*);
 
-// macro to check if condition is met, if not delete lval and return error
+// asserts
 #define LASSERT(args, cond, fmt, ...) if(!cond){ lval_del(args); return lval_err(fmt, ##__VA_ARGS__); }
+#define LASSERT_TYPE(func, args, index, expect) \
+  LASSERT(args, (args -> cell[index] -> type == expect), \
+    "Function '%s' passed incorrect type for argument %i. Got %s, Expected %s.", \
+    func, index, ltype_name(args -> cell[index]->type), ltype_name(expect))
+
+#define LASSERT_NUM(func, args, num) \
+  LASSERT(args, (args -> count == num), \
+    "Function '%s' passed incorrect number of arguments. Got %i, Expected %i.", \
+    func, args->count, num)
+
+#define LASSERT_NOT_EMPTY(func, args, index) \
+  LASSERT(args, (args -> cell[index] -> count != 0), \
+    "Function '%s' passed {} for argument %i.", func, index);

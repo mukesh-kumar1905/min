@@ -83,7 +83,7 @@ lval* lval_add(lval* v, lval *x){
 lval* lval_fun(lcalculate func){
   lval* v = malloc(sizeof(lval));
   v -> type = LVAL_FUN;
-  v -> fun = func;
+  v -> builtin = func;
   return v;
 }
 
@@ -91,6 +91,20 @@ lval* lval_read_num(mpc_ast_t* t){
   errno = 0;
   long x = strtol(t -> contents, NULL, 10);
   return errno != ERANGE ? lval_num(x) : lval_err("invalid number");
+}
+
+lval* lval_lambda(lval* formals, lval* body){
+  lval* v = malloc(sizeof(lval));
+  v -> type = LVAL_FUN;
+
+  // set builtin to null
+  v -> builtin = NULL;
+
+  v -> env = lenv_new();
+  // set formals and body
+  v -> formals = formals;
+  v -> body = body;
+  return v;
 }
 
 lval* lval_read(mpc_ast_t* t){
@@ -125,10 +139,20 @@ lval* lval_copy(lval* v){
   switch(v -> type){
     // copy number & funcs directly
     case LVAL_NUM: x -> num = v -> num; break;
-    case LVAL_FUN: x -> fun = v -> fun; break;
+    case LVAL_FUN:
+    if(v -> builtin){
+      x -> builtin = v -> builtin;
+    } else {
+      x -> builtin = NULL;
+      x -> env = lenv_copy(v -> env);
+      x -> formals = lval_copy(v -> formals);
+      x -> body = lval_copy(v -> body);
+    }
+    break;
+
     //allocate and copy to new string
     case LVAL_SYM:
-      x -> sym = malloc(strlen(x -> sym) + 1);
+      x -> sym = malloc(strlen(v -> sym) + 1);
       strcpy(x -> sym, v -> sym);
       break;
     case LVAL_ERR:
@@ -154,7 +178,13 @@ void lval_del(lval* v){
   switch (v -> type){
     // do nothing for primitive data and function pointers
     case LVAL_NUM: break;
-    case LVAL_FUN: break;
+    case LVAL_FUN:
+      if(!v -> builtin){
+        lenv_del(v -> env);
+        lval_del(v -> formals);
+        lval_del(v -> body);
+      }
+    break;
 
     // free up strings
     case LVAL_ERR: free(v->err); break;
@@ -174,13 +204,16 @@ void lval_del(lval* v){
   free(v);
 }
 
+// get new execution environment
 lenv* lenv_new(void){
   lenv* e = malloc(sizeof(lenv));
+  e -> par = NULL;
   e -> count = 0;
   e -> syms = NULL;
   e -> vals = NULL;
   return e;
 }
+
 
 void lenv_del(lenv* e){
   for (int i = 0; i < e -> count; i++)
@@ -193,6 +226,22 @@ void lenv_del(lenv* e){
   free(e);
 }
 
+
+lenv* lenv_copy(lenv* e){
+  lenv* n = malloc(sizeof(lenv));
+  n -> par = e -> par;
+  n -> count = e -> count;
+  n -> syms = malloc(sizeof(char*) * n->count);
+  n -> vals = malloc(sizeof(lval*) * n -> count);
+  for (int i = 0; i < e -> count; i++) {
+    n -> syms[i] = malloc(strlen(e -> syms[i]) + 1);
+    strcpy(n -> syms[i], e -> syms[i]);
+    n -> vals[i] = lval_copy(e -> vals[i]);
+  }
+  return n;
+}
+
+// get symbol from environment
 lval* lenv_get(lenv* e, lval* k){
   for (int i = 0; i < e -> count; ++i)
   {
@@ -200,9 +249,14 @@ lval* lenv_get(lenv* e, lval* k){
       return lval_copy(e -> vals[i]);
     }
   }
+  // if no symbol check in parent
+  if (e -> par){
+    return lenv_get(e -> par, k);
+  }
   return lval_err("unbound symbol '%s'", k -> sym);
 }
 
+// put value in environment
 void lenv_put(lenv* e, lval* k, lval* v){
   for (int i = 0; i < e -> count; ++i)
   {
@@ -220,6 +274,13 @@ void lenv_put(lenv* e, lval* k, lval* v){
   e -> vals[e -> count - 1] = lval_copy(v);
   e -> syms[e -> count - 1] = malloc(strlen(k -> sym) + 1);
   strcpy(e -> syms[e -> count -1], k -> sym);
+}
+
+// add to global environment
+void lenv_def(lenv* e, lval* k, lval* v){
+  // get to global environment
+  while(e -> par){ e = e -> par; }
+  lenv_put(e, k, v);
 }
 
 void lenv_add_builtin(lenv* e, char* name, lcalculate func){
@@ -249,7 +310,17 @@ void lval_expr_print(lval* v, char open, char close){
 void lval_print(lval* v){
   switch (v -> type){
     case LVAL_NUM: printf("%li", v -> num); break;
-    case LVAL_FUN: printf("<function>"); break;
+    case LVAL_FUN:
+      if(v -> builtin){
+        printf("<builtin>");  
+      } else {
+        printf("(\\ ");
+        lval_print(v -> formals);
+        putchar(' ');
+        lval_print(v -> body);
+        putchar(')');
+      }
+      break;
     case LVAL_ERR: printf("Error: %s", v -> err); break;
     case LVAL_SYM:   printf("%s", v->sym); break;
     case LVAL_SEXPR: lval_expr_print(v, '(', ')'); break;

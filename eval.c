@@ -22,12 +22,12 @@ lval* lval_eval_sexpr(lenv* e, lval* v){
   // ensure first element is symbol
   lval* f = lval_pop(v, 0);
   if(f -> type != LVAL_FUN) {
+    return lval_err("S expr starts with incorrect type. Got %s, Expected %s", ltype_name(f -> type), ltype_name(LVAL_FUN));
     lval_del(f); lval_del(v);
-    return lval_err("first element is not a function");
   }
 
   // calculate
-  lval* result = f -> fun(e, v);
+  lval* result = lval_call(e, f, v);
   lval_del(f);
   return result;
 }
@@ -41,6 +41,47 @@ lval* lval_eval(lenv* e, lval *v){
   // evaluate s expressions
   if (v -> type == LVAL_SEXPR) { return lval_eval_sexpr(e, v); }
   return v;
+}
+
+lval* lval_call(lenv* e, lval* f, lval* a){
+  // if builtin call func
+  if(f -> builtin){ return f -> builtin(e, a); }
+
+  // record number of args
+  int given = a -> count;
+  int total = f -> formals -> count;
+
+  while(a -> count){
+    if(f -> formals -> count == 0){
+      lval_del(a);
+      return lval_err("Function passed too many args. Got %i, Expected %i", given, total);
+    }
+
+    // pop symbol from formals
+    lval* sym = lval_pop(f -> formals, 0);
+
+    // pop the next arg from the list
+    lval* val = lval_pop(a, 0);
+
+    lenv_put(f -> env, sym, val);
+
+    // clear up symbol and value
+    lval_del(sym);
+    lval_del(val);
+  }
+
+  lval_del(a);
+  if(f -> formals -> count == 0){
+    // set parent env
+    f -> env -> par = e;
+
+    // eval and return
+    return builtin_eval(f -> env, lval_add(lval_sexpr(), lval_copy(f -> body)));
+  } else {
+    // return copy of new func
+    return lval_copy(f);
+  }
+
 }
 
 lval* lval_pop(lval* v, int i){
@@ -168,7 +209,15 @@ lval* builtin_op(lenv* e, lval* a, char* op){
 }
 
 lval* builtin_def(lenv* e, lval* a){
-  LASSERT(a, (a -> cell[0] -> type == LVAL_QEXPR), "Function `def` passed incorrect type");
+  return builtin_var(e, a, "def");
+}
+
+lval* builtin_put(lenv* e, lval* a){
+  return builtin_var(e, a, "=");
+}
+
+lval* builtin_var(lenv* e, lval* a, char* func){
+  LASSERT_TYPE(func, a, 0, LVAL_QEXPR);
 
   // first argument to symbol list, ie, name of variables
   lval* syms = a -> cell[0];
@@ -176,16 +225,48 @@ lval* builtin_def(lenv* e, lval* a){
   // all names should be symbols
   for (int i = 0; i < syms -> count; ++i)
   {
-    LASSERT(a, (syms -> cell[i] -> type == LVAL_SYM), "Function `def` cannot define non symbol");
+    LASSERT(a, (syms -> cell[i] -> type == LVAL_SYM), "Function %s cannot define non symbol. Got %s, Expected %s",
+      func, ltype_name(syms -> cell[i] -> type), ltype_name(LVAL_SYM));
   }
 
-  LASSERT(a, (syms -> count == a -> count -1) , "Funtion def given incoreect number of values");
+  LASSERT(a, (syms -> count == a -> count -1) , "Funtion %s passed incorrect number of values. Got %i, Expected %i ",
+    syms -> count, a -> count -1);
   for (int i = 0; i < syms -> count; ++i)
   {
-    lenv_put(e, syms -> cell[i], a -> cell[i + 1]);
+    // If 'def' define in globally. If 'put' define in locally
+    if (strcmp(func, "def") == 0) {
+      lenv_def(e, syms -> cell[i], a -> cell[i+1]);
+    }
+
+    if (strcmp(func, "=")   == 0) {
+      lenv_put(e, syms -> cell[i], a -> cell[i+1]);
+    }
   }
   lval_del(a);
   return lval_sexpr();
+}
+
+lval* builtin_lambda(lenv* e, lval* a){
+  // check 2 args, both q -expr
+  LASSERT_NUM("\\", a, 2);
+  LASSERT_TYPE("\\", a, 0, LVAL_QEXPR);
+  LASSERT_TYPE("\\", a, 1, LVAL_QEXPR);
+
+  // check first q expr only contains symbols
+  for (int i = 0; i < a -> cell[0] -> count; i++)
+  {
+    LASSERT(a, (a -> cell[0] -> cell[i] -> type == LVAL_SYM),
+      "Cannot define non symbol. Got %s, Expected %s",
+      ltype_name(a -> cell[0] -> cell[i] -> type),
+      ltype_name(LVAL_SYM));
+  }
+  // pop first 2 args and make lval lambda
+  lval* formals = lval_pop(a, 0);
+  lval* body = lval_pop(a, 0);
+
+  lval_del(a);
+
+  return lval_lambda(formals, body);
 }
 
 lval* builtin_add(lenv* e, lval* a) {
@@ -213,8 +294,10 @@ void lenv_add_builtins(lenv* e){
   lenv_add_builtin(e, "eval", builtin_eval);
   lenv_add_builtin(e, "join", builtin_join);
 
-  //def function to define vatiables
+  //def function to define variables/ functions
+  lenv_add_builtin(e, "\\",  builtin_lambda);
   lenv_add_builtin(e, "def", builtin_def);
+  lenv_add_builtin(e, "=", builtin_put);
 
   /* Mathematical Functions */
   lenv_add_builtin(e, "+", builtin_add);
