@@ -44,6 +44,7 @@ lval* lval_num(long);
 lval* lval_err(char*, ...);
 lval* lval_sym(char*);
 lval* lval_sexpr();
+lval* lval_qexpr();
 lval* lval_fun(lcalculate);
 lval* lval_lambda(lval*, lval*);
 lval* lval_add(lval*, lval*);

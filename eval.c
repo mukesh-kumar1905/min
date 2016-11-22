@@ -43,6 +43,7 @@ lval* lval_eval(lenv* e, lval *v){
   return v;
 }
 
+// calling a function (builtin or user defined)
 lval* lval_call(lenv* e, lval* f, lval* a){
   // if builtin call func
   if(f -> builtin){ return f -> builtin(e, a); }
@@ -60,6 +61,20 @@ lval* lval_call(lenv* e, lval* f, lval* a){
     // pop symbol from formals
     lval* sym = lval_pop(f -> formals, 0);
 
+    // special case of &
+    if(strcmp(sym -> sym, "&") == 0){
+      // & has to be followed by another symbol
+      if(f -> formals -> count != 1){
+        lval_del(a);
+        return lval_err("Function format invalid. & should be followed by a single symbol");
+      }
+      lval* nsym = lval_pop(f -> formals, 0);
+      lenv_put(f -> env, nsym, builtin_list(e, a));
+      lval_del(sym);
+      lval_del(nsym);
+      break;
+    }
+
     // pop the next arg from the list
     lval* val = lval_pop(a, 0);
 
@@ -71,6 +86,25 @@ lval* lval_call(lenv* e, lval* f, lval* a){
   }
 
   lval_del(a);
+
+  // if `&` remains in formal argument list, but no args are passed to func
+  if(f -> formals -> count > 0 && strcmp(f -> formals -> cell[0] -> sym, "&")){
+    // check for valid & formal args
+    if(f -> formals -> count != 2){
+      return lval_err("Function format invalid. & should be followed by a single symbol");
+    }
+
+    // remove and
+    lval_del(lval_pop(f -> formals, 0));
+    lval* sym = lval_pop(f -> formals, 0);
+    lval* val = lval_qexpr();
+
+    // bind to env and delete
+    lenv_put(f -> env, sym, val);
+    lval_del(sym);
+    lval_del(val);
+  }
+
   if(f -> formals -> count == 0){
     // set parent env
     f -> env -> par = e;
