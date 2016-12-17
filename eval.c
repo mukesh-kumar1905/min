@@ -211,7 +211,7 @@ lval* builtin_op(lenv* e, lval* a, char* op){
   for (int i = 0; i < a -> count; i++){
     if(a -> cell[i] -> type != LVAL_NUM){
       lval_del(a);
-      return lval_err("Cannot operate on non-number");
+      return lval_err("%s cannot operate on non-number. Found %s, Expected %s", op, ltype_name(a -> cell[i] -> type), ltype_name(LVAL_NUM));
     }
   }
 
@@ -240,6 +240,87 @@ lval* builtin_op(lenv* e, lval* a, char* op){
   }
   lval_del(a);
   return x;
+}
+
+lval* builtin_gt(lenv* e, lval* a){
+  return builtin_ord(e, a, ">");
+}
+
+lval* builtin_lt(lenv* e, lval* a){
+  return builtin_ord(e, a, "<");
+}
+
+lval* builtin_ge(lenv* e, lval* a){
+  return builtin_ord(e, a, ">=");
+}
+
+lval* builtin_le(lenv* e, lval* a){
+  return builtin_ord(e, a, "<=");
+}
+
+lval* builtin_ord(lenv* e, lval* a, char* op){
+  LASSERT_NUM(op, a, 2);
+  LASSERT_TYPE(op, a, 0, LVAL_NUM);
+  LASSERT_TYPE(op, a, 1, LVAL_NUM);
+
+  int r;
+  if (strcmp(op, ">")  == 0) {
+    r = (a->cell[0]->num >  a->cell[1]->num);
+  }
+  if (strcmp(op, ">=")  == 0) {
+    r = (a->cell[0]->num >=  a->cell[1]->num);
+  }
+  if (strcmp(op, "<")  == 0) {
+    r = (a->cell[0]->num <  a->cell[1]->num);
+  }
+  if (strcmp(op, "<=")  == 0) {
+    r = (a->cell[0]->num <=  a->cell[1]->num);
+  }
+  lval_del(a);
+  return lval_num(r);
+}
+
+lval* builtin_cmp(lenv* e, lval* a, char *op){
+  LASSERT_NUM(op, a, 2);
+  int r;
+  if(strcmp(op, "==") == 0){
+    r = lval_eq(a -> cell[0], a -> cell[1]);
+  }
+  if(strcmp(op, "!=") == 0){
+    r = !lval_eq(a -> cell[0], a -> cell[1]);
+  }
+  lval_del(a);
+  return lval_num(r);
+}
+
+lval* builtin_eq(lenv* e, lval* a){
+  return builtin_cmp(e, a, "==");
+}
+
+lval* builtin_ne(lenv* e, lval* a){
+  return builtin_cmp(e, a, "!=");
+}
+
+lval* builtin_if(lenv* e, lval* a){
+  LASSERT_NUM("if", a, 3);
+  LASSERT_TYPE("if", a, 0, LVAL_NUM);
+  LASSERT_TYPE("if", a, 1, LVAL_QEXPR);
+  LASSERT_TYPE("if", a, 2, LVAL_QEXPR);
+
+  // convert noth expr to s-exp for evaluation
+  a -> cell[1] -> type = LVAL_SEXPR;
+  a -> cell[2] -> type = LVAL_SEXPR;
+
+  lval* r;
+  // if comdition true eval first
+  if(a -> cell[0] -> num){
+    r = lval_eval(e, lval_pop(a, 1));
+  } else {
+    r = lval_eval(e, lval_pop(a, 2));
+  }
+
+  lval_del(a);
+  return r;
 }
 
 lval* builtin_def(lenv* e, lval* a){
@@ -338,4 +419,13 @@ void lenv_add_builtins(lenv* e){
   lenv_add_builtin(e, "-", builtin_sub);
   lenv_add_builtin(e, "*", builtin_mul);
   lenv_add_builtin(e, "/", builtin_div);
+
+  /* Comparison Functions */
+  lenv_add_builtin(e, "if", builtin_if);
+  lenv_add_builtin(e, "==", builtin_eq);
+  lenv_add_builtin(e, "!=", builtin_ne);
+  lenv_add_builtin(e, ">",  builtin_gt);
+  lenv_add_builtin(e, "<",  builtin_lt);
+  lenv_add_builtin(e, ">=", builtin_ge);
+  lenv_add_builtin(e, "<=", builtin_le);
 }

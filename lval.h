@@ -52,6 +52,7 @@ lval* lval_add(lval*, lval*);
 lval* lval_read_num(mpc_ast_t*);
 lval* lval_read(mpc_ast_t*);
 
+int lval_eq(lval*, lval*);
 lval* lval_copy(lval*);
 void lval_del(lval*);
 

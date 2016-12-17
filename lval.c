@@ -131,6 +131,36 @@ lval* lval_read(mpc_ast_t* t){
   return x;
 }
 
+int lval_eq(lval* x, lval* y){
+  // different types are unequal
+  if(x -> type != y -> type){ return 0; }
+  switch(x -> type){
+    // compare numbers and strings directly
+    case LVAL_NUM : return (x -> num == y -> num);
+    case LVAL_ERR : return (strcmp(x -> err, y -> err) == 0);
+    case LVAL_SYM : return (strcmp(x -> sym, y -> sym) == 0);
+    // if builtin compare, else compare body and formals
+    case LVAL_FUN:
+      if(x -> builtin || y -> builtin){
+        return x -> builtin == y -> builtin;
+      } else {
+        return lval_eq(x -> formals, y -> formals) && lval_eq(x -> body, y -> body);
+      }
+    // if list compare each element
+    case LVAL_QEXPR:
+    case LVAL_SEXPR:
+      if(x -> count != y -> count){ return 0; }
+      for(int i = 0; i < x -> count; i++){
+        // if any cell unequal , lists unequal
+        if(!lval_eq(x -> cell[i], y -> cell[i])){ return 0; }
+      }
+      // if all equal list equal
+      return 1;
+    break;
+  }
+  return 0;
+}
+
 //return a copy of lval
 lval* lval_copy(lval* v){
   lval* x = malloc(sizeof(lval));
