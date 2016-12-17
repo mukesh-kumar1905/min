@@ -8,6 +8,7 @@ char* ltype_name(int t) {
     case LVAL_NUM: return "Number";
     case LVAL_ERR: return "Error";
     case LVAL_SYM: return "Symbol";
+    case LVAL_STR: return "String";
     case LVAL_SEXPR: return "S-Expression";
     case LVAL_QEXPR: return "Q-Expression";
     default: return "Unknown";
@@ -45,12 +46,21 @@ lval* lval_err(char* fmt, ...){
   return v;
 }
 
-// Construct a pointer to new symbol lval
+// Construct a new symbol lval
 lval* lval_sym(char* s){
   lval* v = malloc(sizeof(lval));
   v -> type = LVAL_SYM;
   v -> sym = malloc(strlen(s) + 1);
   strcpy(v->sym, s);
+  return v;
+}
+
+// Construct a new string lval
+lval* lval_str(char* s){
+  lval* v = malloc(sizeof(lval));
+  v -> type = LVAL_STR;
+  v -> str = malloc(strlen(s) + 1);
+  strcpy(v -> str, s);
   return v;
 }
 
@@ -109,8 +119,9 @@ lval* lval_lambda(lval* formals, lval* body){
 
 lval* lval_read(mpc_ast_t* t){
   // if symbol or number convert for that type and return
-  if(strstr(t->tag, "number")){ return lval_read_num(t); }
-  if(strstr(t->tag, "symbol")){ return lval_sym(t -> contents); }
+  if(strstr(t -> tag, "number")){ return lval_read_num(t); }
+  if(strstr(t -> tag, "symbol")){ return lval_sym(t -> contents); }
+  if(strstr(t -> tag, "string")) { return lval_read_str(t); }
 
   // if root or sexpr create empty list
   lval* x = NULL;
@@ -121,14 +132,30 @@ lval* lval_read(mpc_ast_t* t){
   // fill the list with valid expressions within
   for (int i = 0; i < t -> children_num; i++)
   {
-    if (strcmp(t->children[i]->contents, "(") == 0) { continue; }
-    if (strcmp(t->children[i]->contents, ")") == 0) { continue; }
-    if (strcmp(t->children[i]->contents, "}") == 0) { continue; }
-    if (strcmp(t->children[i]->contents, "{") == 0) { continue; }
-    if (strcmp(t->children[i]->tag,  "regex") == 0) { continue; }
+    if (strcmp(t -> children[i] -> contents, "(") == 0) { continue; }
+    if (strcmp(t -> children[i] -> contents, ")") == 0) { continue; }
+    if (strcmp(t -> children[i] -> contents, "}") == 0) { continue; }
+    if (strcmp(t -> children[i] -> contents, "{") == 0) { continue; }
+    if (strcmp(t -> children[i] ->tag,  "regex") == 0) { continue; }
     x = lval_add(x, lval_read(t -> children[i]));
   }
   return x;
+}
+
+// string need to be unescaped and " on both sides needs to be stripped off
+lval* lval_read_str(mpc_ast_t* t){
+  // cut off final "
+  t -> contents[strlen(t -> contents) - 1] = '\0';
+  // ignore first " and copy
+  char* unescaped = malloc(strlen(t -> contents + 1) + 1);
+  strcpy(unescaped, t -> contents + 1);
+
+  // unescape
+  unescaped = mpcf_unescape(unescaped);
+
+  lval* str = lval_str(unescaped);
+  free(unescaped);
+  return str;
 }
 
 int lval_eq(lval* x, lval* y){
@@ -139,6 +166,8 @@ int lval_eq(lval* x, lval* y){
     case LVAL_NUM : return (x -> num == y -> num);
     case LVAL_ERR : return (strcmp(x -> err, y -> err) == 0);
     case LVAL_SYM : return (strcmp(x -> sym, y -> sym) == 0);
+    case LVAL_STR : return (strcmp(x -> str, y -> str) == 0);
+
     // if builtin compare, else compare body and formals
     case LVAL_FUN:
       if(x -> builtin || y -> builtin){
@@ -186,8 +215,12 @@ lval* lval_copy(lval* v){
       strcpy(x -> sym, v -> sym);
       break;
     case LVAL_ERR:
-      x -> err = malloc(strlen(x -> err) + 1);
+      x -> err = malloc(strlen(v -> err) + 1);
       strcpy(x -> err, v -> err);
+      break;
+    case LVAL_STR:
+      x -> str = malloc(strlen(v -> str) + 1);
+      strcpy(x -> str, v -> str);
       break;
     // copy lists by copying sub-epr list
     case LVAL_SEXPR:
@@ -219,6 +252,7 @@ void lval_del(lval* v){
     // free up strings
     case LVAL_ERR: free(v->err); break;
     case LVAL_SYM: free(v->sym); break;
+    case LVAL_STR: free(v->str); break;
 
     // delete all items inside s-expr or q-expr
     case LVAL_QEXPR:
@@ -352,7 +386,8 @@ void lval_print(lval* v){
       }
       break;
     case LVAL_ERR: printf("Error: %s", v -> err); break;
-    case LVAL_SYM:   printf("%s", v->sym); break;
+    case LVAL_SYM: printf("%s", v->sym); break;
+    case LVAL_STR: lval_print_str(v); break;
     case LVAL_SEXPR: lval_expr_print(v, '(', ')'); break;
     case LVAL_QEXPR: lval_expr_print(v, '{', '}'); break;
   }
@@ -360,3 +395,14 @@ void lval_print(lval* v){
 
 // print lval followed by newline
 void lval_println(lval* v) { lval_print(v); putchar('\n'); }
+void lval_print_str(lval* v) {
+  // copy string
+  char* escaped = malloc(strlen(v -> str) + 1);
+  strcpy(escaped, v -> str);
+
+  // escape string
+  escaped = mpcf_escape(escaped);
+  printf("\"%s\"", escaped);
+
+  free(escaped);
+}

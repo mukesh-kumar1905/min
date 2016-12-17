@@ -6,7 +6,7 @@ typedef struct lval lval;
 typedef struct lenv lenv;
 
 // Create Enumeration of Possible val Types
-enum { LVAL_ERR, LVAL_NUM, LVAL_SYM, LVAL_FUN, LVAL_SEXPR, LVAL_QEXPR };
+enum { LVAL_ERR, LVAL_NUM, LVAL_SYM, LVAL_STR, LVAL_FUN, LVAL_SEXPR, LVAL_QEXPR };
 
 typedef lval*(*lcalculate)(lenv*, lval*);
 
@@ -18,6 +18,7 @@ struct lval {
   long num;
   char* err;
   char* sym;
+  char* str;
 
   // function
   lcalculate builtin;
@@ -43,6 +44,7 @@ char* ltype_name(int);
 lval* lval_num(long);
 lval* lval_err(char*, ...);
 lval* lval_sym(char*);
+lval* lval_str(char*);
 lval* lval_sexpr();
 lval* lval_qexpr();
 lval* lval_fun(lcalculate);
@@ -51,6 +53,7 @@ lval* lval_add(lval*, lval*);
 
 lval* lval_read_num(mpc_ast_t*);
 lval* lval_read(mpc_ast_t*);
+lval* lval_read_str(mpc_ast_t*);
 
 int lval_eq(lval*, lval*);
 lval* lval_copy(lval*);
@@ -67,3 +70,4 @@ void lenv_add_builtin(lenv*, char*, lcalculate);
 
 void lval_print(lval*);
 void lval_println(lval*);
+void lval_print_str(lval*);
