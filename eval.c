@@ -88,7 +88,7 @@ lval* lval_call(lenv* e, lval* f, lval* a){
   lval_del(a);
 
   // if `&` remains in formal argument list, but no args are passed to func
-  if(f -> formals -> count > 0 && strcmp(f -> formals -> cell[0] -> sym, "&")){
+  if(f -> formals -> count > 0 && (strcmp(f -> formals -> cell[0] -> sym, "&") == 0)){
     // check for valid & formal args
     if(f -> formals -> count != 2){
       return lval_err("Function format invalid. & should be followed by a single symbol");
