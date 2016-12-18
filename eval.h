@@ -1,4 +1,5 @@
 #include "lval.h"
+#include "deps/mpc.h"
 
 lval* lval_eval_sexpr(lenv*, lval*);
 lval* lval_eval(lenv*, lval*);
@@ -33,6 +34,8 @@ lval* builtin_cmp(lenv*, lval*, char*);
 lval* builtin_eq(lenv*, lval*);
 lval* builtin_ne(lenv*, lval*);
 lval* builtin_if(lenv*, lval*);
+
+lval* builtin_load(lenv*, lval*, mpc_parser_t*);
 
 
 void lenv_add_builtins(lenv*);

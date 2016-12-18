@@ -1,13 +1,12 @@
 #include <stdio.h>
 #include <stdlib.h>
-#include "deps/mpc.h"
 #include "eval.h"
 #include "io.h"
 
 lval eval(mpc_ast_t*);
 lval eval_op(lval, char*, lval);
 
-int main(int i, char** a){
+int main(int argc, char* argv[]){
   // polish notation parsers
   mpc_parser_t* Number = mpc_new("number");
   mpc_parser_t* Symbol = mpc_new("symbol");
@@ -42,6 +41,17 @@ int main(int i, char** a){
   puts("min Version 0.1");
   puts("Press Ctrl+c to Exit\n");
 
+  if(argc > 1){
+    for (int i = 1; i < argc; i++)
+    {
+      lval* args = lval_add(lval_sexpr(), lval_str(argv[i]));
+
+      lval* x = builtin_load(e, args, Min);
+
+      if(x -> type == LVAL_ERR){ lval_println(x); }
+      lval_del(x);
+    }
+  }
   // repl loop
   while (1) {
     char* input = readinput();
@@ -67,7 +77,6 @@ int main(int i, char** a){
 
     free(input);
   }
-
   lenv_del(e);
   // Undefine and Delete our Parsers
   mpc_cleanup(8, Number, Symbol, String, Comment, Sexpr, Qexpr, Expr, Min);

@@ -400,6 +400,43 @@ lval* builtin_div(lenv* e, lval* a) {
   return builtin_op(e, a, "/");
 }
 
+lval* builtin_load(lenv* e, lval* a, mpc_parser_t* Min){
+  LASSERT_NUM("load", a, 1);
+  LASSERT_TYPE("load", a, 0, LVAL_STR);
+
+  // parse file given by lval
+  mpc_result_t r;
+  if(mpc_parse_contents(a -> cell[0] -> str, Min, &r)){
+    // read contents
+    lval* expr = lval_read(r.output);
+    mpc_ast_delete(r.output);
+
+    // eval each expression
+    while(expr -> count){
+      lval* x = lval_eval(e, lval_pop(expr, 0));
+
+      // if error print error
+      if(x -> type == LVAL_ERR){ lval_println(x); }
+
+      lval_del(x);
+    }
+    // free expression and arguments
+    lval_del(expr);
+    lval_del(a);
+
+    // return empty sexpr
+    return lval_sexpr();
+  } else {
+    // get lval_err from error message
+    char* err_msg = mpc_err_string(r.error);
+    lval* err = lval_err("Could not load %s. Error: { %s }", a -> cell[0] -> str, err_msg);
+
+    free(err_msg);
+    lval_del(a);
+
+    return err;
+  }
+}
 
 void lenv_add_builtins(lenv* e){
    /* List Functions */
