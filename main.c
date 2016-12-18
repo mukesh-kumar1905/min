@@ -32,7 +32,7 @@ int main(int argc, char* argv[]){
   Number, Symbol, String, Comment, Sexpr, Qexpr, Expr, Min);
 
   // new environment
-  lenv* e = lenv_new();
+  lenv* e = lenv_new(Min);
 
   //setup builtin funcs
   lenv_add_builtins(e);
@@ -46,7 +46,7 @@ int main(int argc, char* argv[]){
     {
       lval* args = lval_add(lval_sexpr(), lval_str(argv[i]));
 
-      lval* x = builtin_load(e, args, Min);
+      lval* x = builtin_load(e, args);
 
       if(x -> type == LVAL_ERR){ lval_println(x); }
       lval_del(x);

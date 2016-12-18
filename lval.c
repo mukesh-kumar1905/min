@@ -110,7 +110,7 @@ lval* lval_lambda(lval* formals, lval* body){
   // set builtin to null
   v -> builtin = NULL;
 
-  v -> env = lenv_new();
+  v -> env = lenv_new(NULL);
   // set formals and body
   v -> formals = formals;
   v -> body = body;
@@ -270,12 +270,13 @@ void lval_del(lval* v){
 }
 
 // get new execution environment
-lenv* lenv_new(void){
+lenv* lenv_new(mpc_parser_t* Min){
   lenv* e = malloc(sizeof(lenv));
   e -> par = NULL;
   e -> count = 0;
   e -> syms = NULL;
   e -> vals = NULL;
+  e -> parser = Min;
   return e;
 }
 

@@ -400,13 +400,27 @@ lval* builtin_div(lenv* e, lval* a) {
   return builtin_op(e, a, "/");
 }
 
-lval* builtin_load(lenv* e, lval* a, mpc_parser_t* Min){
+lval* builtin_load(lenv* e, lval* a){
   LASSERT_NUM("load", a, 1);
   LASSERT_TYPE("load", a, 0, LVAL_STR);
+  
+  mpc_parser_t* parser = e -> parser;
+  lenv* env = e;
+  while(env -> par && !parser){
+    if(env -> parser != NULL){
+      parser = env -> parser;
+    } else {
+      env = env -> par;
+    }
+  }
+
+  if(!parser){
+    return lval_err("Min language parser not found in scope. Could not import file %s", a -> cell[0] -> str);
+  }
 
   // parse file given by lval
   mpc_result_t r;
-  if(mpc_parse_contents(a -> cell[0] -> str, Min, &r)){
+  if(mpc_parse_contents(a -> cell[0] -> str, parser, &r)){
     // read contents
     lval* expr = lval_read(r.output);
     mpc_ast_delete(r.output);
@@ -429,7 +443,7 @@ lval* builtin_load(lenv* e, lval* a, mpc_parser_t* Min){
   } else {
     // get lval_err from error message
     char* err_msg = mpc_err_string(r.error);
-    lval* err = lval_err("Could not load %s. Error: { %s }", a -> cell[0] -> str, err_msg);
+    lval* err = lval_err("Could not load file %s. \n %s", a -> cell[0] -> str, err_msg);
 
     free(err_msg);
     lval_del(a);
@@ -465,4 +479,6 @@ void lenv_add_builtins(lenv* e){
   lenv_add_builtin(e, "<",  builtin_lt);
   lenv_add_builtin(e, ">=", builtin_ge);
   lenv_add_builtin(e, "<=", builtin_le);
+
+  lenv_add_builtin(e, "import", builtin_load);
 }

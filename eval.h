@@ -35,7 +35,7 @@ lval* builtin_eq(lenv*, lval*);
 lval* builtin_ne(lenv*, lval*);
 lval* builtin_if(lenv*, lval*);
 
-lval* builtin_load(lenv*, lval*, mpc_parser_t*);
+lval* builtin_load(lenv*, lval*);
 
 
 void lenv_add_builtins(lenv*);

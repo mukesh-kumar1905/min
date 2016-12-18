@@ -37,6 +37,7 @@ struct lenv {
   int count;
   char** syms;
   lval** vals;
+  mpc_parser_t* parser;
 };
 
 char* ltype_name(int);
@@ -59,7 +60,7 @@ int lval_eq(lval*, lval*);
 lval* lval_copy(lval*);
 void lval_del(lval*);
 
-lenv* lenv_new(void);
+lenv* lenv_new(mpc_parser_t*);
 lenv* lenv_copy(lenv*);
 void lenv_del(lenv*);
 
