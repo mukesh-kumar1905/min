@@ -12,22 +12,25 @@ int main(int i, char** a){
   mpc_parser_t* Number = mpc_new("number");
   mpc_parser_t* Symbol = mpc_new("symbol");
   mpc_parser_t* String = mpc_new("string");
+  mpc_parser_t* Comment = mpc_new("comment");
   mpc_parser_t* Sexpr = mpc_new("sexpr");
   mpc_parser_t* Qexpr  = mpc_new("qexpr");
   mpc_parser_t* Expr = mpc_new("expr");
   mpc_parser_t* Min = mpc_new("min");
 
   mpca_lang(MPCA_LANG_DEFAULT,
-  "                                                      \
-    number   : /-?[0-9]+/;                               \
-    symbol   : /[a-zA-Z0-9_+\\-*\\/\\\\=<>!&]+/;         \
-    string   : /\"(\\\\.|[^\"])*\"/;                     \
-    sexpr    : '(' <expr>* ')';                          \
-    qexpr    : '{' <expr>* '}';                          \
-    expr     : <number> | <symbol> | <string> | <sexpr> | <qexpr>;  \
-    min      : /^/ <expr>* /$/;                          \
+  "                                                       \
+    number   : /-?[0-9]+/;                                \
+    symbol   : /[a-zA-Z0-9_+\\-*\\/\\\\=<>!&]+/;          \
+    string   : /\"(\\\\.|[^\"])*\"/;                      \
+    comment  : /;[^\\r\\n]*/ ;                            \
+    sexpr    : '(' <expr>* ')';                           \
+    qexpr    : '{' <expr>* '}';                           \
+    expr     : <number> | <symbol> | <string> | <comment> \
+             | <sexpr> | <qexpr>;                         \
+    min      : /^/ <expr>* /$/;                           \
   ",
-  Number, Symbol, String, Sexpr, Qexpr, Expr, Min);
+  Number, Symbol, String, Comment, Sexpr, Qexpr, Expr, Min);
 
   // new environment
   lenv* e = lenv_new();
@@ -67,6 +70,6 @@ int main(int i, char** a){
 
   lenv_del(e);
   // Undefine and Delete our Parsers
-  mpc_cleanup(7, Number, Symbol, String, Sexpr, Qexpr, Expr, Min);
+  mpc_cleanup(8, Number, Symbol, String, Comment, Sexpr, Qexpr, Expr, Min);
   return 0;
 }
