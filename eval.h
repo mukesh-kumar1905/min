@@ -36,6 +36,8 @@ lval* builtin_ne(lenv*, lval*);
 lval* builtin_if(lenv*, lval*);
 
 lval* builtin_load(lenv*, lval*);
+lval* builtin_print(lenv*, lval*);
+lval* builtin_error(lenv*, lval*);
 
 
 void lenv_add_builtins(lenv*);

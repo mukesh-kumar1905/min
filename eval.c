@@ -452,6 +452,30 @@ lval* builtin_load(lenv* e, lval* a){
   }
 }
 
+lval* builtin_print(lenv* e, lval* a){
+  // print each argument separated by spaces
+  for (int i = 0; i < a -> count; i++)
+  {
+    lval_print(a -> cell[i]);
+    putchar(' ');
+  }
+
+  putchar('\n');
+  lval_del(a);
+
+  return lval_sexpr();
+}
+
+lval* builtin_error(lenv* e, lval* a){
+  LASSERT_NUM("error", a, 1);
+  LASSERT_TYPE("error", a, 0, LVAL_STR);
+
+  lval* err = lval_err(a -> cell[0] -> str);
+  lval_del(a);
+
+  return err;
+}
+
 void lenv_add_builtins(lenv* e){
    /* List Functions */
   lenv_add_builtin(e, "list", builtin_list);
@@ -481,4 +505,6 @@ void lenv_add_builtins(lenv* e){
   lenv_add_builtin(e, "<=", builtin_le);
 
   lenv_add_builtin(e, "import", builtin_load);
+  lenv_add_builtin(e, "print", builtin_print);
+  lenv_add_builtin(e, "error", builtin_error);
 }
