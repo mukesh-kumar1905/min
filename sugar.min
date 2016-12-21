@@ -1,7 +1,129 @@
-(def {fun} (\ {args body} {def (head args) (\ (tail args) body)}))
-(fun {unpack f xs} {eval (join (list f) xs)})
+; Atoms
+;-------
+(def {nil} {})
+(def {true} 1)
+(def {false} 0)
+
+
+; Helper functions
+;-----------------
+; function helper can define functions
+; fun {add x y} { + x y }
+; `add 3 4` => 7
+(def {fun} (\ {args body} {
+	def (head args) (\ (tail args) body)
+}))
+
+; unpack arguments to a predefined s expression based func
+; `(+ {1 2 3})` is invalid as + doesnt take q-expr, use unpack to send q-expr as argument `(unpack + {1 2 3})` => 6
+(fun {unpack f xs} {
+	eval (join (list f) xs)
+})
+
+; pack list for function
+; ex `(tail 1 2 3)` is invalid as tail takes a q-exp, use pack to send args as q-exp `(pack tail 1 2 3)` => { 2 3 }
 (fun {pack f & xs} {f xs})
+
+; aliases
 (def {uncurry} pack)
 (def {curry} unpack)
-(fun {len l} { if (== l {}) {0} {+ 1 (len (tail l))} })
-(fun {reverse l} { if (== l {}) {{}} {join (reverse (tail l)) (head l)} })
+
+; do several things in sequence
+(fun {do & l}{
+	if(== l nil)
+		{nil}
+		{last l}
+})
+
+; open new scope
+(fun {let b} {
+	((\ {_} b) ())
+})
+
+
+; Logical operators
+;------------------
+(fun {not x} { if (= x false) {true} {false}} )
+(fun {or x y} { + x y })
+(fun {and x y} { * x y })
+
+; List functions
+;----------------
+;length of list
+(fun {len l} {
+	if (== l nil)
+		{0}
+		{+ 1 (len (tail l))}
+})
+
+; reverse a list
+(fun {reverse l} {
+	if (== l nil)
+		{nil}
+		{join (reverse (tail l)) (head l)} 
+})
+
+;first second and third element
+(fun {fst l} { eval (head l) })
+(fun {snd l} { eval (head (tail l)) })
+(fun {trd l} { eval (head (tail (tail l))) })
+
+; nth element
+(fun {nth n l}{
+	if(== n 0)
+		{fst l}
+		{nth (- n 1) (tail l)}
+})
+
+; last element
+(fun {last l} { nth (- (len l) 1) l})
+
+; take first n items from list
+(fun {take n l}{
+	if(== n 0)
+		{nil}
+		{join (head l) (take (- n 1) (tail l))}
+})
+
+; drop last n items
+(fun {drop n l}{
+	if (== n 0)
+		{l}
+		{drop (- n 1) (tail l)}
+})
+
+; split at n
+(fun {split n l}{
+	list (take n l) (drop n l)
+})
+
+; check if element present in list
+(fun {elem x l}{
+	if(== l nil)
+		{false}
+		{if(== x (fst l)) {true} {elem x (tail l)}}
+})
+
+; map
+(fun {map f l}{
+	if(== l nil)
+		{nil}
+		{join (list (f (fst l))) (map f (tail l))}
+})
+
+; filter
+(fun {filter f l}{
+	if(== l nil)
+		{nil}
+		{join (if(== (f (fst l)) true) {head l} { nil}) (filter f (tail l))}
+})
+
+; reduce
+(fun {reduce f z l}{
+	if(== l nil)
+		{z}
+		{reduce f (f z (fst l)) (tail l)}
+})
+
+(fun {sum l} {reduce + 0 l})
+(fun {product l} {reduce * 1 l})

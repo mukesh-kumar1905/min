@@ -52,8 +52,8 @@ lval* lval_fun(lcalculate);
 lval* lval_lambda(lval*, lval*);
 lval* lval_add(lval*, lval*);
 
-lval* lval_read_num(mpc_ast_t*);
 lval* lval_read(mpc_ast_t*);
+lval* lval_read_num(mpc_ast_t*);
 lval* lval_read_str(mpc_ast_t*);
 
 int lval_eq(lval*, lval*);
