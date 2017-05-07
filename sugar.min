@@ -127,3 +127,5 @@
 
 (fun {sum l} {reduce + 0 l})
 (fun {product l} {reduce * 1 l})
+(fun {equal a b} {reduce == a b})
+(fun {set a b} {(= a b)})

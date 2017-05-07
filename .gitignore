@@ -1,7 +1,2 @@
-*
-!*.c
-!*.h
-!*.min
-!Makefile
-!README.md
-!.gitignore
+.DS_Store
+
